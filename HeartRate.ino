@@ -37,11 +37,21 @@ void setup() {
   //  attachInterrupt(digitalPinToInterrupt(4), resetState, CHANGE);
    // Initializes Timer2 to throw an interrupt every 2mS.
    Serial.begin(115200);
-  TCCR2A = 0x02;     // DISABLE PWM ON DIGITAL PINS 3 AND 11, AND GO INTO CTC MODE
-  TCCR2B = 0x06;     // DON'T FORCE COMPARE, 256 PRESCALER 
-  OCR2A = 0X7C;      // SET THE TOP OF THE COUNT TO 124 FOR 500Hz SAMPLE RATE
-  TIMSK2 = 0x02;     // ENABLE INTERRUPT ON MATCH BETWEEN TIMER2 AND OCR2A
-  sei();             // MAKE SURE GLOBAL INTERRUPTS ARE ENABLED 
+/*  TCCR1A = 0x02;     // DISABLE PWM ON DIGITAL PINS 3 AND 11, AND GO INTO CTC MODE
+  TCCR1B = 0x06;     // DON'T FORCE COMPARE, 256 PRESCALER 
+  OCR1A = 0X7C;      // SET THE TOP OF THE COUNT TO 124 FOR 500Hz SAMPLE RATE
+  TIMSK1 = 0x02;     // ENABLE INTERRUPT ON MATCH BETWEEN TIMER2 AND OCR2A
+  sei();             // MAKE SURE GLOBAL INTERRUPTS ARE ENABLED */
+  noInterrupts();           // disable all interrupts
+  TCCR1A = 0;
+  TCCR1B = 0;
+  TCNT1  = 0;
+
+  OCR1A = 125;            // compare match register 16MHz/256/2Hz
+  TCCR1B |= (1 << WGM12);   // CTC mode
+  TCCR1B |= (1 << CS12);    // 256 prescaler 
+  TIMSK1 |= (1 << OCIE1A);  // enable timer compare interrupt
+  interrupts();             // enable all interrupts
 }
 
 void printValue(String valName, double Value)
@@ -139,7 +149,7 @@ void initialState(){
   
 }
 
-ISR(TIMER2_COMPA_vect){
+ISR(TIMER1_COMPA_vect){
   reading = analogRead(heartPin);
   ISRflag = 1;
   heartPeriod++;
