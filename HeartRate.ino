@@ -111,6 +111,7 @@ if(calibration){
     else{
        digitalWrite(pulseDisplay, ledValue);
       /*if(ISRflag){
+        
         printValue("currentMean", currentMean);
         printValue("previousMean", previousMean);
         printValue("previousDMean", previousDMean);
