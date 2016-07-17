@@ -269,11 +269,11 @@ void loop(){
     if(heartPeriod > babyDeathPeriod){
         //speaker shit
         Serial.println("BABY DEAD");
-        tone(buzzerPin,500);
+       // tone(buzzerPin,500);
         babyHRGone=1;
       }
     if(peakFound){
-      Serial.println("PEAK FOUND BIIITCH)");
+      Serial.println("DOOT doot");
       printValue("hearPeriod", heartPeriod);    
       peakFound = 0;
       heartPeriod = 0;
@@ -282,8 +282,7 @@ void loop(){
       if(value == HIGH){
         value=LOW;
       }
-      if(value ==LOW){
-        
+      else if(value ==LOW){
         value=HIGH;
       }
     }
