@@ -33,6 +33,7 @@ volatile int heartRateFlag = 0 ;
 volatile int peakFound=0;
 volatile unsigned int heartPeriod = 0;
 volatile unsigned int minimumPeakPeriod=50;
+volatile unsigned int babyHRGone = 0;
 
 double stdDEV = 0;
 double calibrationMean = 0;
@@ -202,19 +203,15 @@ void breathingRate(){
   changeZ = abs(curZ - prevZ);
   
   
-  if(changeX > 15000){
-   // if(changeY > 15000){
-      //if(changeZ > 15000)
+  if(changeY > 15000 && changeZ > 15000){
         fallNotice = 0;
-     // }
-   // }
   }
 
-  if(changeY > 15000){
+  if(changeY > 15000 && changeX > 15000){
     fallNotice = 0;
   }
 
-  if(changeZ > 15000){
+  if(changeZ > 15000 && changeX > 15000){
     fallNotice = 0;
   }
   if(fallNotice < 300){
@@ -263,6 +260,7 @@ void loop(){
       calibrationCounter = 0;
       if(stdDEV != NAN){ //recalibrate if hearRate is NaN
         calibration = 0;
+        heartPeriod=0;
       }
     }
   }  
@@ -271,13 +269,15 @@ void loop(){
     if(heartPeriod > babyDeathPeriod){
         //speaker shit
         Serial.println("BABY DEAD");
-        //tone(buzzerPin,500);
+        tone(buzzerPin,500);
+        babyHRGone=1;
       }
     if(peakFound){
       Serial.println("PEAK FOUND BIIITCH)");
       printValue("hearPeriod", heartPeriod);    
       peakFound = 0;
       heartPeriod = 0;
+      
       digitalWrite(pulseDisplay, value);
       if(value == HIGH){
         value=LOW;
@@ -301,30 +301,29 @@ void calibrateHandler(){
 }
 
 void calibrationReset(){
-samplesTaken = 0;
-windowSize = 35;
-currentMean = 0;
-previousMean = 0;
-previousDMean = 0;
-derMean = 0; 
-reading = 0;
-calibration = 1;
-ISRflag = 0;
-heartRate = 0;
-heartRateFlag = 0 ;
-peakFound=0;
-heartPeriod = 0;
-
-stdDEV = 0;
-calibrationMean = 0;
-value = LOW;          //value for LED
-calibrationCounter = 0;
-calibrationSamples = 1000;
-sum = 0;
-babyHeartAttackPeriod =2;
-squareMean =0;
-
-  
+    samplesTaken = 0;
+    windowSize = 35;
+    currentMean = 0;
+    previousMean = 0;
+    previousDMean = 0;
+    derMean = 0; 
+    reading = 0;
+    calibration = 1;
+    ISRflag = 0;
+    heartRate = 0;
+    heartRateFlag = 0 ;
+    peakFound=0;
+    heartPeriod = 0;
+    
+    stdDEV = 0;
+    calibrationMean = 0;
+    value = LOW;          //value for LED
+    calibrationCounter = 0;
+    calibrationSamples = 1000;
+    sum = 0;
+    babyHeartAttackPeriod =2;
+    squareMean =0;
+    babyHRGone=0;
 }
 
 void printValue(String valName, double Value)
@@ -349,14 +348,18 @@ void resetHandler(){
   //heartRate stuff
   heartPeriod=0;
   calibrationReset();
+  babyHRGone=0;
 }
 
 
 //Heart Rate interrupt 
 ISR(TIMER1_COMPA_vect){
+  if (babyHRGone == 0){
   reading = analogRead(heartPin);
   ISRflag = 1;
+
   heartPeriod++;
+  
   
   if( calibration == 0 ){
       if (samplesTaken < windowSize){ // counts up to 50, caps the samples taken at the window size
@@ -376,8 +379,7 @@ ISR(TIMER1_COMPA_vect){
      previousDMean = derMean;
     }
     
-    digitalWrite(pulseDisplay, LOW); //OTHERWISE KEEP IT ON THE DOWNLOW
-  
+  }
   
 }
 
