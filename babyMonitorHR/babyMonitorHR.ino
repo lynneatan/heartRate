@@ -32,6 +32,7 @@ volatile int heartRate = 0;
 volatile int heartRateFlag = 0 ;
 volatile int peakFound=0;
 volatile unsigned int heartPeriod = 0;
+volatile unsigned int minimumPeakPeriod=50;
 
 double stdDEV = 0;
 double calibrationMean = 0;
@@ -41,7 +42,7 @@ int value = LOW;
 int calibrationCounter = 0;
 int  calibrationSamples = 1000;
 long  sum = 0;
-int babyDeathPeriod = 3000;
+int babyDeathPeriod = 1500;
 int babyHeartAttackPeriod =2;
 int ledValue = 0;
 double squareMean =0;
@@ -233,7 +234,7 @@ void breathingRate(){
 
 void loop(){
   
- //breathingRate();
+ breathingRate();
   
 //Heart Rate things
   if(calibration){
@@ -295,11 +296,11 @@ void calibrateHandler(){
   //calibrateSignal = digitalRead(calibratePin);
   countMean = 0;
   //calibrate heartRate
-  calibraitonReset();
+  calibrationReset();
   
 }
 
-void calibraitonReset(){
+void calibrationReset(){
 samplesTaken = 0;
 windowSize = 35;
 currentMean = 0;
@@ -320,7 +321,6 @@ value = LOW;          //value for LED
 calibrationCounter = 0;
 calibrationSamples = 1000;
 sum = 0;
-babyDeathPeriod = 3000;
 babyHeartAttackPeriod =2;
 squareMean =0;
 
@@ -348,7 +348,7 @@ void resetHandler(){
   childDeath = false;
   //heartRate stuff
   heartPeriod=0;
-  calibraitonReset();
+  calibrationReset();
 }
 
 
@@ -367,7 +367,7 @@ ISR(TIMER1_COMPA_vect){
       derMean = currentMean - previousMean;
       
   
-      if (currentMean >= calibrationMean + stdDEV && ( previousDMean > 0 && derMean < 0 )){
+      if (currentMean >= calibrationMean + stdDEV && ( previousDMean > 0 && derMean < 0 ) && heartPeriod>minimumPeakPeriod){
           //peak found
           peakFound = 1;
           //digitalWrite(pulseDisplay, HIGH);// SHOW PULSE ON LED
