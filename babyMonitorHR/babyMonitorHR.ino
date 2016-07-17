@@ -37,6 +37,7 @@ double stdDEV = 0;
 double calibrationMean = 0;
 //double NAN;
 
+int value = LOW;
 int calibrationCounter = 0;
 int  calibrationSamples = 1000;
 long  sum = 0;
@@ -94,7 +95,10 @@ void setup(){
   interrupts(); 
   
 }
-void loop(){
+
+
+void breathingRate(){
+  if(ISRflag){
   Wire.beginTransmission(mpu);
   Wire.write(0x3B);                              // starting with register 0x3B (ACCEL_XOUT_H)
   Wire.endTransmission(false);
@@ -103,11 +107,7 @@ void loop(){
   AcY=Wire.read()<<8|Wire.read();              // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
   AcZ=Wire.read()<<8|Wire.read();              // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
   Tmp=Wire.read()<<8|Wire.read();              // 0x41 (TEMP_OUT_H) & 0x42 (TEMP_OUT_L)
-  GyX=Wire.read()<<8|Wire.read();              // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
-  GyY=Wire.read()<<8|Wire.read();              // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
-  GyZ=Wire.read()<<8|Wire.read();              // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
-  delay(2);
-
+  
   //if(calibrateSignal == HIGH){
   if(countMean < 5){
       if(count < 1000){
@@ -126,12 +126,6 @@ void loop(){
           amplitude = MaxVal - MinVal;
           amplitudeMean = amplitude + amplitudeMean;
         }
-        Serial.print("mean: ");
-        Serial.println(amplitudeMean);
-        Serial.print("Max: ");
-        Serial.println(MaxVal);
-        Serial.print("Min: ");
-        Serial.println(MinVal);
         countMean++;
         count = 0;
         curMaxVal = AcY;
@@ -171,17 +165,10 @@ void loop(){
     }
     else if(count==1000){
       amplitude = MaxVal - MinVal;
-      Serial.print("threshold: ");
-      Serial.println(threshold);
-      Serial.print("amplitude:");
-      Serial.println(amplitude);
-      Serial.print("Max: ");
-      Serial.println(MaxVal);
-      Serial.print("Min: ");
-      Serial.println(MinVal);
+
       if(threshold - amplitude > (threshold/2)){
         if(threshold!= 0){
-          Serial.println("YOUR CHILD IS DYING!");
+          //Serial.println("YOUR CHILD IS DYING!");
           tone(buzzerPin,1000);
           digitalWrite(redLED,HIGH);
           digitalWrite(blueLED,LOW);
@@ -212,21 +199,8 @@ void loop(){
   changeX = abs(curX - prevX);
   changeY = abs(curY - prevY);
   changeZ = abs(curZ - prevZ);
- /* if(changeX > 15000){
-    Serial.println("DEAD");
-    tone(buzzerPin,2000,8);
-  }
-
-  if(changeY > 15000){
-    Serial.println("DEAD");
-    tone(buzzerPin,2000,8);
-  }
-
-  if(changeZ > 15000){
-    Serial.println("DEAD");
-    tone(buzzerPin,2000,8);
-  }
-*/
+  
+  
   if(changeX > 15000){
    // if(changeY > 15000){
       //if(changeZ > 15000)
@@ -253,6 +227,14 @@ void loop(){
   prevX = AcX;
   prevY = AcY;
   prevZ = AcZ;
+  }
+}
+
+
+void loop(){
+  
+ //breathingRate();
+  
 //Heart Rate things
   if(calibration){
     //Serial.println("calibrating");
@@ -282,36 +264,74 @@ void loop(){
         calibration = 0;
       }
     }
-  }  else
-  {
+  }  
+  
+  else{
+    if(heartPeriod > babyDeathPeriod){
+        //speaker shit
+        Serial.println("BABY DEAD");
+        //tone(buzzerPin,500);
+      }
     if(peakFound){
       Serial.println("PEAK FOUND BIIITCH)");
       printValue("hearPeriod", heartPeriod);    
-      if(heartPeriod > babyDeathPeriod){
-        //speaker shit
-        tone(buzzerPin,500);
-      }
-      /*if(heartPeriod < babyHeartAttackPeriod){
-        //speaker
-      }*/
       peakFound = 0;
       heartPeriod = 0;
+      digitalWrite(pulseDisplay, value);
+      if(value == HIGH){
+        value=LOW;
+      }
+      if(value ==LOW){
+        
+        value=HIGH;
+      }
     }
   }
   
 }
 
+
 void calibrateHandler(){
   //calibrateSignal = digitalRead(calibratePin);
   countMean = 0;
   //calibrate heartRate
-  calibration = 1;
+  calibraitonReset();
+  
+}
+
+void calibraitonReset(){
+samplesTaken = 0;
+windowSize = 35;
+currentMean = 0;
+previousMean = 0;
+previousDMean = 0;
+derMean = 0; 
+reading = 0;
+calibration = 1;
+ISRflag = 0;
+heartRate = 0;
+heartRateFlag = 0 ;
+peakFound=0;
+heartPeriod = 0;
+
+stdDEV = 0;
+calibrationMean = 0;
+value = LOW;          //value for LED
+calibrationCounter = 0;
+calibrationSamples = 1000;
+sum = 0;
+babyDeathPeriod = 3000;
+babyHeartAttackPeriod =2;
+squareMean =0;
+
+  
 }
 
 void printValue(String valName, double Value)
 {
   Serial.print(valName); Serial.print(" = "); Serial.println(Value);
 }
+
 
 
 //
@@ -328,7 +348,9 @@ void resetHandler(){
   childDeath = false;
   //heartRate stuff
   heartPeriod=0;
+  calibraitonReset();
 }
+
 
 //Heart Rate interrupt 
 ISR(TIMER1_COMPA_vect){
@@ -355,11 +377,6 @@ ISR(TIMER1_COMPA_vect){
     }
     
     digitalWrite(pulseDisplay, LOW); //OTHERWISE KEEP IT ON THE DOWNLOW
-    
-     //flagStuff
-   /*  if(heartRate <20){
-       heartRateFlag =1;
-     } */
   
   
 }
