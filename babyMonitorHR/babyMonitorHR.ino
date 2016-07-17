@@ -34,6 +34,7 @@ volatile int peakFound=0;
 volatile unsigned int heartPeriod = 0;
 volatile unsigned int minimumPeakPeriod=50;
 volatile unsigned int babyHRGone = 0;
+volatile unsigned int peakCounter = 0;
 
 double stdDEV = 0;
 double calibrationMean = 0;
@@ -43,7 +44,7 @@ int value = LOW;
 int calibrationCounter = 0;
 int  calibrationSamples = 1000;
 long  sum = 0;
-int babyDeathPeriod = 1500;
+int babyDeathPeriod = 2000;
 int babyHeartAttackPeriod =2;
 int ledValue = 0;
 double squareMean =0;
@@ -372,10 +373,15 @@ ISR(TIMER1_COMPA_vect){
       if (currentMean >= calibrationMean + stdDEV && ( previousDMean > 0 && derMean < 0 ) && heartPeriod>minimumPeakPeriod){
           //peak found
           peakFound = 1;
+          peakCounter++;
           //digitalWrite(pulseDisplay, HIGH);// SHOW PULSE ON LED
       }
        previousMean = currentMean;
      previousDMean = derMean;
+     
+     if (peakCounter == 14){
+       samplesTaken = 0;
+     }
     }
     
   }
